@@ -11,7 +11,7 @@ RUBY_VERSION="2.6.6"
 RAILS_VERSION="6.0.2"
 MYSQL_VERSION="8.0"
 NGINX_VERSION="1.17.10"
-APP_ADDLESS="localhost"
+APP_ADDLESS="app"
 
 if [ $# != 1 ]; then
   echo "引数の指定が間違っています。"

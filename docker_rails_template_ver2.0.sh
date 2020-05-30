@@ -17,7 +17,7 @@ USER="1000"
 GROUP="1000"
 
 # アプリケーションのIPアドレスを指定
-APP_ADDLESS="localhost"
+APP_ADDLESS="app"
 
 # 各環境のバージョンを指定
 RUBY_VERSION="2.6.6"
