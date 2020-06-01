@@ -60,31 +60,25 @@ mkdir -p src/tmp/sockets
 touch src/tmp/sockets/.keep
 echo ""
 
-# DBデータ配置フォルダを作成
-echo "----- Make source directories -----"
-echo "mkdir -p db_data"
-mkdir -p db_data
-echo ""
-
 # 各種ファイル作成
 echo "----- Make source directories -----"
 # app用のDockerfile 作成
 echo "make app Dockerfile"
 cat << EOF > docker/app/Dockerfile
 FROM ruby:${RUBY_VERSION}
-RUN apt-get update -y && \
-    apt-get install -y default-mysql-client nodejs npm sudo && \
+RUN apt-get update -y && \\
+    apt-get install -y default-mysql-client nodejs npm sudo && \\
     npm install -g -y yarn
 RUN mkdir /myapp
 WORKDIR /myapp
 COPY ./src/Gemfile Gemfile
 COPY ./src/Gemfile.lock Gemfile.lock
-RUN bundle install && \
+RUN bundle install && \\
     rails webpacker:install
-RUN useradd -Nm -u ${USER} ${USER_NAME} && \
-    groupadd -g ${GROUP} ${USER_NAME} && \
-    usermod -aG sudo ${USER_NAME} && \
-    usermod -u ${USER} -g ${GROUP} ${USER_NAME} && \
+RUN useradd -Nm -u ${USER} ${USER_NAME} && \\
+    groupadd -g ${GROUP} ${USER_NAME} && \\
+    usermod -aG sudo ${USER_NAME} && \\
+    usermod -u ${USER} -g ${GROUP} ${USER_NAME} && \\
     echo ${USER_NAME}:${USER_PASSWORD} | chpasswd
 COPY ./src /myapp
 EOF
@@ -189,7 +183,7 @@ mkdir -p .circleci
 cat << EOF > .circleci/config.yml
 version: 2
 jobs:
-  build:
+  test:
     machine:
       image: circleci/classic:edge
     working_directory: ~/repo
@@ -204,12 +198,16 @@ jobs:
       - run:
           name: docker-compose up --build -d
           command: docker-compose up --build -d
+      - run: sleep 30
+      - run:
+          name: docker-compose run app rails db:create
+          command: docker-compose run app rails db:create
       - run:
           name: docker-compose run app rails db:migrate
           command: docker-compose run app rails db:migrate
       - run:
-          name: docker-compose run app rails test
-          command: docker-compose run app rails test
+          name: docker-compose run app bundle exec rspec spec
+          command: docker-compose run app bundle exec rspec spec
       - run:
           name: docker-compose down
           command: docker-compose down
@@ -218,10 +216,7 @@ workflows:
   version: 2
   workflows:
     jobs:
-      - build:
-          filters:
-            branches:
-              only: master
+      - test
 EOF
 
 echo ""
@@ -232,8 +227,8 @@ echo "docker-compose run app rails new . --force --database=mysql --bundle-skip"
 docker-compose run app rails new . --force --database=mysql --bundle-skip
 
 # ファイルの権限変更
-echo "sudo chown -R ${USER}:${GROUP} src docker docker-compose.yml"
-sudo chown -R ${USER}:${GROUP} src docker docker-compose.yml
+echo "sudo chown -R ${USER}:${GROUP} ."
+sudo chown -R ${USER}:${GROUP} .
 
 # Gemfile を編集
 echo "edit Gemfile"
@@ -362,20 +357,22 @@ yarn-debug.log*
 .yarn-integrity
 EOF
 
-# ファイルの権限変更(2回目)
-echo "sudo chown -R ${USER}:${GROUP} src docker docker-compose.yml"
-sudo chown -R ${USER}:${GROUP} src docker docker-compose.yml
-
 echo "----- container start -----"
 # イメージをビルド
 echo "docker-compose build"
 docker-compose build
 
 # 初回マイグレーション
+echo "docker-compose run app bundle exec rails generate rspec:install"
+docker-compose run app bundle exec rails generate rspec:install
 echo "docker-compose run app rails db:create"
 docker-compose run app rails db:create
 echo "docker-compose run app rails db:migrate"
 docker-compose run app rails db:migrate
+
+# ファイルの権限変更(2回目)
+echo "sudo chown -R ${USER}:${GROUP} ."
+sudo chown -R ${USER}:${GROUP} .
 
 # 一度コンテナをリセット
 echo "docker-compose down"
