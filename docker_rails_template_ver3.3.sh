@@ -18,9 +18,6 @@ NGINX_VERSION="1.17.10"
 # アプリケーションのIPアドレスを指定
 APP_ADDLESS="app"
 
-# アプリケーションのIPアドレスを指定
-APP_DOMAIN=".watanavi.work"
-
 # 開発DB環境設定
 MYSQL_ROOT_PASSWORD="5la&2Rj%4"
 
@@ -28,8 +25,8 @@ MYSQL_ROOT_PASSWORD="5la&2Rj%4"
 MYSQL_HOST_PRODUCTION="ecstest-db.cn8ls5rgklmn.ap-northeast-1.rds.amazonaws.com"
 
 # S3バケット設定
-AWS_BUCKET = "habitapp"
-AWS_REGION = "ap-northeast-1"
+AWS_BUCKET="habitapp"
+AWS_REGION="ap-northeast-1"
 
 # 開発用ユーザを指定
 USER_NAME="dev"
@@ -278,6 +275,9 @@ jobs:
           name: docker-compose up --build -d
           command: docker-compose up --build -d
       - run: sleep 30
+            - run:
+          name: docker-compose exec app rubocop
+          command: docker-compose exec app rubocop
       - run:
           name: docker-compose exec app rails db:create
           command: docker-compose exec app rails db:create
@@ -371,6 +371,8 @@ cat <<EOF >>src/Gemfile
 gem "rspec-rails", group: [:test, :development]
 gem "factory_bot_rails", group: :test
 gem "rails-controller-testing", group: :test
+gem 'rubocop', group: :developement
+gem 'rubocop-rails', group: :development
 EOF
 
 cat src/Gemfile |
@@ -502,7 +504,7 @@ rm __tmpfile__
 # application.rb を編集
 echo "edit src/config/application.rb"
 cat <<EOF >src/config/application.rb
-equire_relative 'boot'
+require_relative 'boot'
 
 require 'rails/all'
 
@@ -520,9 +522,7 @@ module HabitApp
     # -- all .rb files in that directory are automatically loaded after loading
     # the framework and any gems in your application.
 
-    config.hosts << ".example.com"
-    config.hosts << "#{APP_DOMAIN}"
-    config.hosts << Socket.ip_address_list.detect { |addr| addr.ipv4_private? }.ip_address
+    config.hosts.clear
   end
 end
 EOF
